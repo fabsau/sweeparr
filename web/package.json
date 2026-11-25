@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@simplewebauthn/browser": "^13.1.0",
+    "@simplewebauthn/browser": "^14.0.0",
     "i18next": "^27.2.4",
     "i18next-browser-languagedetector": "^8.3.1",
     "lucide-react": "^0.475.0",
