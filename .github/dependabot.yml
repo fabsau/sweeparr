@@ -35,6 +35,13 @@ updates:
       - "dependencies"
       - "frontend"
     groups:
+      vite-toolchain-major:
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+          - "typescript"
+        update-types:
+          - "major"
       npm-minor-patch:
         patterns:
           - "*"
