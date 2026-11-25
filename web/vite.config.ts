@@ -9,25 +9,25 @@ export default defineConfig({
       "/healthz": "http://localhost:8080",
     },
   },
-  esbuild: {
-    drop: ["console", "debugger"],
-    legalComments: "none",
-  },
   build: {
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
-    minify: "esbuild",
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         entryFileNames: "assets/[hash].js",
         chunkFileNames: "assets/[hash].js",
         assetFileNames: "assets/[hash][extname]",
-        manualChunks: {
-          "react-vendor": ["react", "react-dom"],
-          "i18n-vendor": ["i18next", "react-i18next", "i18next-browser-languagedetector"],
-          "icons": ["lucide-react"],
-          "auth-vendor": ["@simplewebauthn/browser", "qrcode.react"],
+        minify: {
+          compress: { dropConsole: true, dropDebugger: true },
+        },
+        codeSplitting: {
+          groups: [
+            { name: "react-vendor", test: /node_modules[\/](react|react-dom|scheduler)[\/]/ },
+            { name: "i18n-vendor", test: /node_modules[\/](i18next|react-i18next|i18next-browser-languagedetector)[\/]/ },
+            { name: "icons", test: /node_modules[\/]lucide-react[\/]/ },
+            { name: "auth-vendor", test: /node_modules[\/](@simplewebauthn[\/]browser|qrcode\.react)[\/]/ },
+          ],
         },
       },
     },
