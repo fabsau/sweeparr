@@ -4,6 +4,12 @@ All notable changes to **Sweeparr** are documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses [Conventional Commits](https://www.conventionalcommits.org/) with automated releases via Release Please.
 
+## [0.9.2](https://github.com/fabsau/sweeparr/compare/v0.9.1...v0.9.2) (2026-11-25)
+
+### Bug Fixes
+
+- Attach Linux binaries and checksums to a draft release before publishing it.
+
 ## [0.9.1](https://github.com/fabsau/sweeparr/compare/v0.9.0...v0.9.1) (2026-11-25)
 
 

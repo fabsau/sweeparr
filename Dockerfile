@@ -11,7 +11,7 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go-build
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-ARG VERSION=0.9.0
+ARG VERSION=0.9.2
 ARG COMMIT=""
 ARG BUILD_DATE=""
 WORKDIR /src
@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/sweeparr ./cmd/sweeparr
 
 FROM alpine:3.24
-ARG VERSION=0.9.0
+ARG VERSION=0.9.2
 ARG COMMIT=""
 ARG BUILD_DATE=""
 
