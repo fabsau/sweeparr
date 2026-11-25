@@ -50,9 +50,9 @@ RULESET_PAYLOAD=$(cat << 'JSON'
     {
       "type": "pull_request",
       "parameters": {
-        "required_approving_review_count": 1,
-        "dismiss_stale_reviews_on_push": true,
-        "require_code_owner_review": true,
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
         "require_last_push_approval": false,
         "required_review_thread_resolution": true
       }
@@ -62,9 +62,17 @@ RULESET_PAYLOAD=$(cat << 'JSON'
       "parameters": {
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
-          { "context": "Frontend Build & Locale Parity" },
-          { "context": "Go Vet & Race Tests" },
-          { "context": "Docker Build Check" }
+          {"context": "Frontend Build & Locale Parity", "integration_id": 15368},
+          {"context": "Go Vet & Race Tests", "integration_id": 15368},
+          {"context": "Docker Build Check", "integration_id": 15368},
+          {"context": "Frontend Dependency Audit", "integration_id": 15368},
+          {"context": "Go Vulnerability Check", "integration_id": 15368},
+          {"context": "Secret Scan (Gitleaks)", "integration_id": 15368},
+          {"context": "CodeQL (go)", "integration_id": 15368},
+          {"context": "CodeQL (javascript-typescript)", "integration_id": 15368},
+          {"context": "Trivy Filesystem & IaC Scan", "integration_id": 15368},
+          {"context": "CodeQL", "integration_id": 57789},
+          {"context": "Trivy", "integration_id": 57789}
         ]
       }
     }
@@ -82,4 +90,68 @@ else
   echo "Created ruleset 'Protect main'."
 fi
 
-echo "Done! ${REPO} is configured with branch protection, auto-merge, and security scanning."
+echo "Applying tag ruleset to protect release tags (v*)..."
+TAG_RULESET_PAYLOAD=$(cat << 'JSON'
+{
+  "name": "Protect release tags",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/v*"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" }
+  ]
+}
+JSON
+)
+
+EXISTING_TAG_ID=$(gh api "repos/${REPO}/rulesets" --jq '.[] | select(.name=="Protect release tags") | .id' 2>/dev/null || true)
+if [ -n "${EXISTING_TAG_ID}" ]; then
+  gh api -X PUT "repos/${REPO}/rulesets/${EXISTING_TAG_ID}" --input - <<< "${TAG_RULESET_PAYLOAD}" >/dev/null
+  echo "Updated existing tag ruleset #${EXISTING_TAG_ID}."
+else
+  gh api -X POST "repos/${REPO}/rulesets" --input - <<< "${TAG_RULESET_PAYLOAD}" >/dev/null
+  echo "Created ruleset 'Protect release tags'."
+fi
+
+echo "Hardening GitHub Actions permissions (selected actions + mandatory SHA pinning)..."
+gh api -X PUT "repos/${REPO}/actions/permissions" \
+  --field enabled=true \
+  --field allowed_actions="selected" \
+  --field sha_pinning_required=true \
+  >/dev/null
+
+gh api -X PUT "repos/${REPO}/actions/permissions/selected-actions" \
+  --input - << 'JSON' >/dev/null
+{
+  "github_owned_allowed": true,
+  "verified_allowed": false,
+  "patterns_allowed": [
+    "aquasecurity/trivy-action@*",
+    "aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514",
+    "dependabot/fetch-metadata@*",
+    "docker/build-push-action@*",
+    "docker/login-action@*",
+    "docker/metadata-action@*",
+    "docker/setup-buildx-action@*",
+    "docker/setup-qemu-action@*",
+    "googleapis/release-please-action@*"
+  ]
+}
+JSON
+
+gh api -X PUT "repos/${REPO}/actions/permissions/workflow" \
+  --field default_workflow_permissions="read" \
+  --field can_approve_pull_request_reviews=true \
+  >/dev/null
+
+gh api -X PUT "repos/${REPO}/actions/permissions/fork-pr-contributor-approval" \
+  --field approval_policy="all_external_contributors" \
+  >/dev/null
+
+echo "Done! ${REPO} is configured with branch/tag protection, SHA-pinned Actions, auto-merge, and security scanning."
