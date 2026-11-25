@@ -207,14 +207,22 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=false -ldflags="${LDFLAGS}" -o dist/sweeparr-linux-arm64 ./cmd/sweeparr
           (cd dist && sha256sum sweeparr-linux-* > checksums.txt)
 
-      - name: Upload binaries to GitHub Release
+      - name: Attach binaries and publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.rel.outputs.tag }}
         run: |
           assets=(dist/sweeparr-linux-amd64 dist/sweeparr-linux-arm64 dist/checksums.txt)
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          if release=$(gh release view "$RELEASE_TAG" --json isDraft,assets 2>/dev/null); then
+            if [[ "$(jq -r .isDraft <<< "$release")" == false ]]; then
+              for asset in "${assets[@]}"; do
+                jq -e --arg name "${asset##*/}" 'any(.assets[]; .name == $name)' <<< "$release" >/dev/null
+              done
+              echo "Release $RELEASE_TAG is already published with all required assets"
+              exit 0
+            fi
           else
-            gh release create "$RELEASE_TAG" "${assets[@]}" --verify-tag --generate-notes
+            gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes
           fi
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
