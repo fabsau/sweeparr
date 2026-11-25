@@ -1,0 +1,24 @@
+name: Feature Request
+description: Suggest a new capability, integration, or UX improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What workflow or problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision this working in Sweeparr.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Optional workarounds or alternative designs.

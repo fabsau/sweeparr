@@ -1,0 +1,48 @@
+# Git & repo governance / docs
+.git
+.github
+.gitignore
+.release-please-manifest.json
+release-please-config.json
+docs
+scripts
+*.md
+LICENSE
+docker-compose*.yml
+config*.yaml
+
+# Node / Vite build artifacts & frontend tests
+web/node_modules
+web/dist
+web/.vite
+web/coverage
+web/src/__tests__
+web/vitest.config.ts
+**/.npm
+**/npm-debug.log*
+
+# Go test files & local build outputs
+**/*_test.go
+/dist
+/sweeparr
+/sweeparr-*
+*.test
+*.out
+coverage.*
+
+# Local runtime state & secrets
+state
+secrets
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+
+# Editor & OS metadata
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp

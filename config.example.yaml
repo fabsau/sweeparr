@@ -1,0 +1,226 @@
+# ==============================================================================
+# Sweeparr Declarative Configuration (Optional IaC Mode)
+# ==============================================================================
+# Mount this file at /config/config.yaml (read-only) and set:
+#   SWEEPARR_CONFIG_FILE=/config/config.yaml
+#
+# How config.yaml interacts with the Web UI:
+#   - Sweeparr NEVER writes back to config.yaml (it stays read-only).
+#   - Changes made in the Web UI apply immediately in SQLite so you can test
+#     them live, but on container restart config.yaml re-applies its values
+#     (preserving UI display prefs like theme/locale/accent and paused state).
+#   - Prefer managing everything in the Web UI instead? Simply omit config.yaml
+#     and start Sweeparr with environment variables (see docker-compose.example.yml).
+#
+# Credentials (3 supported ways — Docker Secrets strongly recommended):
+#   1. Secret files (*_file: "/run/secrets/...") — recommended!
+#   2. Environment variables (PLEX_TOKEN, SWEEPARR_MASTER_KEY, etc. — no YAML needed)
+#   3. Inline plaintext (token:, master_key:, password:, client_secret:) — works,
+#      but logs a startup warning; avoid committing plaintext secrets to Git.
+#
+# Validate your config before starting:
+#   docker run --rm -v ./config.yaml:/config/config.yaml:ro \
+#     ghcr.io/fabsau/sweeparr:0.9 -validate-config
+# ==============================================================================
+
+server:
+  # External URL users use to reach Sweeparr.
+  # WebAuthn Passkey rp_id (hostname) and rp_origins are derived automatically
+  # from public_url — no need to duplicate them unless you use multiple origins!
+  public_url: "https://sweeparr.example.com"
+
+  # Optional hostnames/IPs allowed for media server SSRF validation.
+  # Leave empty to allow any private/configured media server host.
+  allowed_hosts:
+    - "plex.internal"
+
+  # Logging verbosity: debug | info | warn | error
+  log_level: "info"
+
+  # Structured log format for container stdout: json | text
+  log_format: "json"
+
+  # Optional WebAuthn / Passkey overrides (normally auto-derived from public_url):
+  # rp_id: "sweeparr.example.com"
+  # rp_display_name: "Sweeparr"
+  # rp_origins:
+  #   - "https://sweeparr.example.com"
+  #   - "https://sweeparr.lan.example.com"
+
+  # Browser session lifetime in hours (default: 168 = 7 days).
+  session_ttl_hours: 168
+
+  # 32-byte hex (64 chars) AES-256-GCM master key used to encrypt stored tokens,
+  # TOTP secrets, and OIDC secrets at rest. Generate with: openssl rand -hex 32
+  master_key_file: "/run/secrets/sweeparr_master_key"
+  # For inline configuration, set master_key to your generated hex value.
+
+auth:
+  # Optional initial admin user created automatically ONLY on first boot
+  # when the database has zero users. Password must be >= 10 characters.
+  bootstrap_admin:
+    username: "admin"
+    password_file: "/run/secrets/sweeparr_admin_password"
+    # Or inline (not recommended):
+    # password: "ChangeMeToAStrongPassword!"
+
+  # Optional OpenID Connect (OIDC / SSO) provider (Authentik, Authelia, Keycloak).
+  # Can also be configured and tested via the UI under Access -> OIDC.
+  # oidc:
+  #   issuer: "https://auth.example.com/application/o/sweeparr/"
+  #   client_id: "sweeparr"
+  #   client_secret_file: "/run/secrets/sweeparr_oidc_secret"
+  #   # Or inline (not recommended):
+  #   # client_secret: "your-oidc-client-secret"
+  #   redirect_url: "https://sweeparr.example.com/api/auth/oidc/callback"
+  #   auto_create: false            # Create Sweeparr users on first OIDC sign-in
+  #   groups_claim: "groups"        # JWT/UserInfo claim containing group names
+  #   admin_groups: ["sweeparr-admins"]
+  #   operator_groups: ["sweeparr-operators"]
+  #   viewer_groups: ["sweeparr-viewers"]
+
+# ==============================================================================
+# Global Scanner Defaults
+# Inherited by every server below; any field can be overridden per server.
+# ==============================================================================
+scanner:
+  # Default queue ordering for automatic background scans:
+  #   season_first (recommended for Plex intro detection) | alphabetical |
+  #   alphabetical_desc | newest_first | oldest_first | smallest_first |
+  #   largest_first | fewest_attempts_first
+  order_strategy: "season_first"
+
+  # Rolling disk read/transfer budget to protect NAS drives & spin-down schedules.
+  drive_budget_gib: 450             # Max GiB analyzed within the window
+  drive_window_hours: 24            # Rolling window length in hours
+
+  # Pacing & safety timeouts
+  inter_item_delay_seconds: 5       # Cooldown pause between consecutive items
+  max_item_scan_minutes: 45         # Abort/timeout if Plex hangs on one item
+
+  # Retry policy & circuit breaker
+  max_attempts: 3                   # Attempts before marking an item exhausted
+  circuit_breaker_threshold: 5      # Pause scanner after N consecutive failures
+  retry_initial_seconds: 300        # Initial exponential backoff delay (5 min)
+  retry_max_seconds: 86400          # Maximum backoff delay (24 hours)
+
+  # Scheduled catalog synchronization (set to 0 to disable)
+  catalog_refresh_minutes: 60       # Fast delta sync interval (minutes)
+  full_sync_interval_hours: 24      # Complete library re-index interval (hours)
+  bulk_page_size: 200               # Items fetched per Plex API page (50-500)
+
+  # Playback protection
+  pause_on_active_streams: true     # Pause scanning while users are streaming
+  pause_on_transcodes_only: false   # If true, only pause for active transcodes
+  max_active_streams: 1             # Stream count threshold to trigger pause
+
+  # Respect Plex library-level disabled capabilities (recommended)
+  respect_library_settings: true
+
+  # Dry-run mode logs planned scans without triggering Plex analysis
+  dry_run: false
+
+  # Optional daily quiet hours (24h local container clock, e.g. 19 -> 23)
+  quiet_hours:
+    enabled: false
+    start: 19
+    end: 23
+
+  # ----------------------------------------------------------------------------
+  # Webhooks, *arr Auto-Scan (e.g. replacing Autoscan/Autopulse) & File Protection
+  # ----------------------------------------------------------------------------
+  # Enable native Sonarr/Radarr/Lidarr webhook coalescing + targeted Plex refresh
+  arr_autoscan_enabled: true
+
+  # Sliding debounce window per directory so full season or album imports
+  # coalesce into ONE targeted Plex directory refresh (seconds, 0-600)
+  webhook_debounce_seconds: 30
+
+  # Maximum coalesce wait before forcing a refresh on very large imports (seconds)
+  webhook_max_wait_seconds: 180
+
+  # Wait time after triggering Plex refresh before syncing & queuing items (seconds)
+  webhook_pickup_wait_seconds: 15
+
+  # Place items arriving from Plex or *arr webhooks at the top of the scan queue
+  webhook_prioritize_top: true
+
+  # Defer scanning files modified within this hold window (seconds)
+  webhook_hold_seconds: 60
+
+  # Defer scanning an item if it is currently being played on Plex
+  hold_playing_items: true
+
+  # Defer scanning files whose mtime is within webhook_hold_seconds (requires
+  # read-only media mount + path_mappings below if paths differ from Plex)
+  hold_modified_files: false
+
+  # Optional *arr -> Plex path rewrites (if Sonarr/Radarr/Lidarr mount paths
+  # differ from the library root paths configured inside Plex)
+  arr_path_mappings: []
+  # arr_path_mappings:
+  #   - remote: "/data/tv"
+  #     local: "/media/tv"
+  #   - remote: "/data/movies"
+  #     local: "/media/movies"
+  #   - remote: "/data/music"
+  #     local: "/media/music"
+
+  # Optional Plex -> Sweeparr container path rewrites (only needed if
+  # hold_modified_files is true and container mount paths differ from Plex)
+  path_mappings: []
+  # path_mappings:
+  #   - remote: "/media"
+  #     local: "/mnt/media"
+
+  # Automatic log & scan history retention
+  log_retention_days: 14            # Purge activity logs older than N days
+  history_retention_days: 30        # Purge scan history older than N days
+  max_log_rows: 5000                # Hard row cap for activity logs
+
+# ==============================================================================
+# Media Servers (Multi-Server Supported)
+# ==============================================================================
+servers:
+  - id: "plex-primary"
+    name: "Main Plex"
+    kind: "plex"
+    url: "https://plex.internal:32400"
+    token_file: "/run/secrets/plex_token"
+    # Or inline (not recommended):
+    # token: "YOUR_PLEX_TOKEN"
+    ssl_verify: true                # Keep true with valid/internal CA certs
+    enabled: true
+
+    # Exact Plex library display names (case-sensitive, as shown in Plex sidebar).
+    # Leave empty ([]) to automatically include ALL synced movie/show/music libraries!
+    enabled_libraries: []
+    # enabled_libraries:
+    #   - "Movies"
+    #   - "TV Shows"
+    #   - "Music"
+
+    # Optional scanning priority order using exact Plex library display names
+    # (top library is scanned first; leave empty for default order).
+    library_priority: []
+    # library_priority:
+    #   - "TV Shows"
+    #   - "Movies"
+    #   - "Music"
+
+    # Optional per-library capability overrides (keys = exact Plex library display names).
+    # Leave omitted/empty to use Plex's own enabled library settings automatically.
+    # Movie/Episode: ads, chapters, credits, deep_analysis, intro (episodes), loudness, previews, voice
+    # Music (tracks): loudness, sonic
+    # library_capabilities:
+    #   "Movies": ["chapters", "credits", "deep_analysis", "loudness", "previews", "voice"]
+    #   "TV Shows": ["ads", "chapters", "credits", "deep_analysis", "intro", "loudness", "previews", "voice"]
+    #   "Music": ["loudness", "sonic"]
+
+    # Optional per-server scanner overrides
+    # scanner:
+    #   drive_budget_gib: 250
+    #   quiet_hours:
+    #     enabled: true
+    #     start: 19
+    #     end: 23

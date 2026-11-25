@@ -1,0 +1,33 @@
+# Binaries & build outputs
+/dist/
+/sweeparr
+/sweeparr-*
+*.exe
+*.test
+*.out
+coverage.*
+
+# Frontend
+/web/node_modules/
+/web/dist/
+/web/.vite/
+/web/coverage/
+
+# Local SQLite state, secrets & runtime config
+/state/
+/secrets/
+*.db
+*.db-shm
+*.db-wal
+config.yaml
+docker-compose.yml
+.env
+.env.*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.idea/
+.vscode/
