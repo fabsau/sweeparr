@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /api/docs
+Allow: /api/openapi.json
+Disallow: /api/auth/
+Disallow: /api/servers/
+Disallow: /api/users
+Disallow: /api/api-keys
+Sitemap: /sitemap.xml

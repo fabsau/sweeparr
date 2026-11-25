@@ -1,0 +1,5 @@
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - Dockerfile
+    statement: The entrypoint starts as root to set state directory ownership, rejects UID/GID 0, and execs Sweeparr as the configured non-root user.
