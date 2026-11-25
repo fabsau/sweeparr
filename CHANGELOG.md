@@ -4,6 +4,13 @@ All notable changes to **Sweeparr** are documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and uses [Conventional Commits](https://www.conventionalcommits.org/) with automated releases via Release Please.
 
+## [0.9.3](https://github.com/fabsau/sweeparr/compare/v0.9.2...v0.9.3) (2026-11-25)
+
+
+### Dependencies
+
+* update frontend dependencies and migrate build toolchain ([#8](https://github.com/fabsau/sweeparr/issues/8)) ([f5a877a](https://github.com/fabsau/sweeparr/commit/f5a877ae79335b55a460517bea0f666c2855cf28))
+
 ## [0.9.2](https://github.com/fabsau/sweeparr/compare/v0.9.1...v0.9.2) (2026-11-25)
 
 ### Bug Fixes
